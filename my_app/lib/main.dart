@@ -1,40 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart'; // 日本語などロケール情報を読み込む
+import 'screens/list_screen.dart';
 
-void main() => runApp(const MyApp());
+void main() async {
+  // DateFormat で日本語表記を使えるようロケールを初期化
+  await initializeDateFormatting('ja'); // 他言語の場合は"en"などに変更
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Todo App',
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Todo App')),
-        body: Center(
-          child: SizedBox(
-            height: 150,
-            child: Card(
-              child: Row(
-                children: const [
-                  Icon(Icons.radio_button_unchecked),
-                  SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('テストタイトル（仮）'),
-                      SizedBox(height: 4),
-                      Text('説明文（仮）'),
-                      SizedBox(height: 4),
-                      Text('12月30日(月)（仮）'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return const MaterialApp(
+      home: ListScreen(),
     );
   }
 }
