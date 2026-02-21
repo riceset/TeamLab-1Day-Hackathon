@@ -43,8 +43,9 @@ class _TodoCardContainer extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
       ),
+      elevation: AppSizes.cardElevation,
       child: Padding(
-        padding: const EdgeInsets.all(AppSizes.cardPadding),
+        padding: AppSizes.cardContentPadding,
         child: child,
       ),
     );
@@ -66,6 +67,7 @@ class _TodoCheckbox extends StatelessWidget {
       icon: Icon(
         isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
         color: AppColors.textPrimary,
+        size: AppSizes.iconSize,
       ),
       onPressed: onPressed,
     );
@@ -84,7 +86,9 @@ class _TodoInfo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _TodoTitle(title: todo.title),
+        const SizedBox(height: AppSizes.textSpacing),
         _TodoDetail(detail: todo.detail),
+        const SizedBox(height: AppSizes.textSpacing),
         _TodoDueDate(dueDate: todo.dueDate),
       ],
     );

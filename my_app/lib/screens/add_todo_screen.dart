@@ -27,7 +27,6 @@ class AddTodoScreenState extends State<AddTodoScreen> {
   void initState() {
     super.initState();
     _titleController.addListener(_updateFormValid);
-    _detailController.addListener(_updateFormValid);
     _dateController.addListener(_updateFormValid);
   }
 
@@ -48,7 +47,6 @@ class AddTodoScreenState extends State<AddTodoScreen> {
   void _updateFormValid() {
     setState(() {
       _isFormValid = _titleController.text.isNotEmpty &&
-          _detailController.text.isNotEmpty &&
           _selectedDate != null;
     });
   }
@@ -164,7 +162,6 @@ class _TitleField extends StatelessWidget {
       controller: controller,
       decoration: const InputDecoration(
         labelText: AppStrings.taskTitleLabel,
-        hintText: AppStrings.taskTitleHint,
       ),
       validator: Validators.titleValidator,
     );
@@ -182,10 +179,9 @@ class _DetailField extends StatelessWidget {
       controller: controller,
       decoration: const InputDecoration(
         labelText: AppStrings.taskDetailLabel,
-        hintText: AppStrings.taskDetailHint,
+        hintText: '${AppStrings.taskDetailHint}（任意）',
       ),
       maxLines: AppSizes.detailMaxLines,
-      validator: Validators.detailValidator,
     );
   }
 }
@@ -235,16 +231,13 @@ class _SubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: isEnabled ? onPressed : null,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isEnabled ? AppColors.primary : AppColors.disabledBackground.shade400,
-      ),
-      child: Text(
-        AppStrings.addTaskButton,
-        style: TextStyle(
-          color: isEnabled ? AppColors.textPrimary : AppColors.disabledBackground,
-          fontSize: AppSizes.fontSizeButton,
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isEnabled ? onPressed : null,
+        child: const Text(
+          AppStrings.addTaskButton,
+          style: TextStyle(fontSize: AppSizes.fontSizeButton),
         ),
       ),
     );

@@ -65,8 +65,6 @@ class _AddTodoButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FloatingActionButton(
       onPressed: onPressed,
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.textPrimary,
       child: const Icon(Icons.add),
     );
   }

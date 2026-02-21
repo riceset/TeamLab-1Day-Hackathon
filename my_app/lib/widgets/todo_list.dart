@@ -72,11 +72,51 @@ class _TodoListContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (todos.isEmpty) {
+      return const _EmptyState();
+    }
+
     return ListView.builder(
       itemCount: todos.length,
       itemBuilder: (context, index) => _TodoListItem(
         todo: todos[index],
         onToggle: () => onDeleteTodo(todos[index]),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            size: 64,
+            color: AppColors.emptyStateText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'タスクがありません',
+            style: TextStyle(
+              fontSize: AppSizes.fontSizeEmptyState,
+              color: AppColors.emptyStateText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '右下のボタンから追加できます',
+            style: TextStyle(
+              fontSize: AppSizes.fontSizeBody,
+              color: AppColors.emptyStateText,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -95,9 +135,64 @@ class _TodoListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppSizes.listItemPadding),
-      child: TodoCard(
-        todo: todo,
-        onToggle: onToggle,
+      child: Dismissible(
+        key: Key(todo.id),
+        direction: DismissDirection.endToStart,
+        background: _buildSwipeBackground(),
+        confirmDismiss: (direction) async {
+          return await _showDeleteConfirmation(context);
+        },
+        onDismissed: (direction) {
+          if (onToggle != null) {
+            onToggle!();
+          }
+        },
+        child: TodoCard(
+          todo: todo,
+          onToggle: onToggle,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwipeBackground() {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      decoration: BoxDecoration(
+        color: AppColors.deleteBackground,
+        borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+      ),
+      child: const Icon(
+        Icons.delete,
+        color: AppColors.deleteIcon,
+        size: 32,
+      ),
+    );
+  }
+
+  Future<bool?> _showDeleteConfirmation(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('タスクを削除'),
+        content: Text('「${todo.title}」を削除しますか？'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.deleteBackground,
+            ),
+            child: const Text('削除'),
+          ),
+        ],
       ),
     );
   }
