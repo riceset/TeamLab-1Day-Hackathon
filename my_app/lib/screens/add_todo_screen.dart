@@ -1,37 +1,50 @@
 import 'package:flutter/material.dart';
-
+import '../constants/app_constants.dart';
 import '../models/todo.dart';
+import '../services/todo_service.dart';
+import '../utils/date_formatter.dart';
+import '../utils/validators.dart';
 
 class AddTodoScreen extends StatefulWidget {
-  const AddTodoScreen({super.key});
+  const AddTodoScreen({super.key, required this.todoService});
+
+  final TodoService todoService;
 
   @override
   AddTodoScreenState createState() => AddTodoScreenState();
 }
 
 class AddTodoScreenState extends State<AddTodoScreen> {
-  // controllerをTextFormFieldに渡して、入力値を取り出せるようにしよう
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _detailController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController(); // 選んだ期日を表示する
-
-  DateTime? _selectedDate; // DatePickerで選んだ期日（Todo作成に使う）
-
-  // validate()で入力チェックを走らせるために使う
+  final TextEditingController _dateController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  bool _isFormValid = false; // 全項目入力済みならtrue→作成ボタンを押せるようにする
+  DateTime? _selectedDate;
+  bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
-    // 入力が変わったら、ボタンの活性/非活性を更新しよう
     _titleController.addListener(_updateFormValid);
     _detailController.addListener(_updateFormValid);
     _dateController.addListener(_updateFormValid);
   }
 
-  // タイトル・詳細・期日が揃ったら、作成ボタンを押せるようにしよう
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateFormValid();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _detailController.dispose();
+    _dateController.dispose();
+    super.dispose();
+  }
+
   void _updateFormValid() {
     setState(() {
       _isFormValid = _titleController.text.isNotEmpty &&
@@ -40,112 +53,14 @@ class AddTodoScreenState extends State<AddTodoScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('新しいタスクを追加'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey, // validate()でまとめて入力チェックできるように、Formにkeyを渡そう
-          child: Column(
-            children: [
-              // タイトル：controllerで入力値を取り、validatorで未入力を弾こう
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'タスクのタイトル',
-                  hintText: '20文字以内で入力してください',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'タイトルを入力してください';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // 詳細：未入力チェックを入れて必須にしよう
-              TextFormField(
-                controller: _detailController,
-                decoration: const InputDecoration(
-                  labelText: 'タスクの詳細',
-                  hintText: '入力してください',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '詳細を入力してください';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // 期日：タップしたらDatePickerを開き、選んだ日付を表示＆保持しよう
-              TextFormField(
-                controller: _dateController,
-                readOnly: true, // 直接入力ではなくDatePickerで選ばせよう
-                decoration: const InputDecoration(
-                  labelText: '期日',
-                  hintText: '年/月/日',
-                  border: OutlineInputBorder(),
-                ),
-                onTap: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    _selectedDate = picked;
-                    _dateController.text = '${picked.year}/${picked.month}/${picked.day}';
-                    _updateFormValid();
-                  }
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '期日を選択してください';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // 全項目が揃っているときだけ、作成ボタンを押せるようにしよう
-              ElevatedButton(
-                onPressed: _isFormValid ? _saveTodo : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isFormValid
-                      ? const Color.fromARGB(255, 0, 0, 255)
-                      : Colors.grey.shade400,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                ),
-                child: Text(
-                  'タスクを追加',
-                  style: TextStyle(
-                    color: _isFormValid ? Colors.white : Colors.grey,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _onDateSelected(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+      _dateController.text = DateFormatter.formatInput(date);
+    });
   }
 
-  // 入力チェック→Todo生成→前の画面へ返す、の流れを作ろう
-  void _saveTodo() {
+  void _saveTodo() async {
     if (_formKey.currentState!.validate()) {
       Todo newTodo = Todo(
         title: _titleController.text,
@@ -153,24 +68,196 @@ class AddTodoScreenState extends State<AddTodoScreen> {
         dueDate: _selectedDate!,
       );
 
-      // 作成したTodoを戻り値として渡そう（前画面で受け取れる）
-      Navigator.pop(context, newTodo);
+      final todos = await widget.todoService.getTodos();
+      todos.add(newTodo);
+      await widget.todoService.saveTodos(todos);
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
     }
   }
 
   @override
-  void dispose() {
-    // 画面を閉じるときにcontrollerを破棄して、メモリリークを防ごう
-    _titleController.dispose();
-    _detailController.dispose();
-    _dateController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const _AddTodoAppBar(),
+      body: _AddTodoForm(
+        formKey: _formKey,
+        titleController: _titleController,
+        detailController: _detailController,
+        dateController: _dateController,
+        isFormValid: _isFormValid,
+        onDateSelected: _onDateSelected,
+        onSave: _saveTodo,
+      ),
+    );
+  }
+}
+
+class _AddTodoAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _AddTodoAppBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(title: const Text(AppStrings.addTaskTitle));
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 初期表示でもボタン状態が合うように、最初に一度評価しておこう
-    _updateFormValid();
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class _AddTodoForm extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController titleController;
+  final TextEditingController detailController;
+  final TextEditingController dateController;
+  final bool isFormValid;
+  final Function(DateTime) onDateSelected;
+  final VoidCallback onSave;
+
+  const _AddTodoForm({
+    required this.formKey,
+    required this.titleController,
+    required this.detailController,
+    required this.dateController,
+    required this.isFormValid,
+    required this.onDateSelected,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSizes.formPadding),
+      child: Form(
+        key: formKey,
+        child: Column(
+          children: [
+            _TitleField(controller: titleController),
+            const _FormSpacer(),
+            _DetailField(controller: detailController),
+            const _FormSpacer(),
+            _DateField(
+              controller: dateController,
+              onDateSelected: onDateSelected,
+            ),
+            const _FormSpacer(height: AppSizes.buttonSpacing),
+            _SubmitButton(
+              isEnabled: isFormValid,
+              onPressed: onSave,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TitleField extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _TitleField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      decoration: const InputDecoration(
+        labelText: AppStrings.taskTitleLabel,
+        hintText: AppStrings.taskTitleHint,
+      ),
+      validator: Validators.titleValidator,
+    );
+  }
+}
+
+class _DetailField extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _DetailField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      decoration: const InputDecoration(
+        labelText: AppStrings.taskDetailLabel,
+        hintText: AppStrings.taskDetailHint,
+      ),
+      maxLines: AppSizes.detailMaxLines,
+      validator: Validators.detailValidator,
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  final TextEditingController controller;
+  final Function(DateTime) onDateSelected;
+
+  const _DateField({
+    required this.controller,
+    required this.onDateSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      decoration: const InputDecoration(
+        labelText: AppStrings.dueDateLabel,
+        hintText: AppStrings.dueDateHint,
+      ),
+      onTap: () async {
+        DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime.now(),
+          lastDate: DateTime(2100),
+        );
+        if (picked != null) {
+          onDateSelected(picked);
+        }
+      },
+      validator: Validators.dateValidator,
+    );
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  final bool isEnabled;
+  final VoidCallback onPressed;
+
+  const _SubmitButton({
+    required this.isEnabled,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isEnabled ? onPressed : null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isEnabled ? AppColors.primary : AppColors.disabledBackground.shade400,
+      ),
+      child: Text(
+        AppStrings.addTaskButton,
+        style: TextStyle(
+          color: isEnabled ? AppColors.textPrimary : AppColors.disabledBackground,
+          fontSize: AppSizes.fontSizeButton,
+        ),
+      ),
+    );
+  }
+}
+
+class _FormSpacer extends StatelessWidget {
+  final double height;
+
+  const _FormSpacer({this.height = AppSizes.formSpacing});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(height: height);
   }
 }
